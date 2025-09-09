@@ -12,7 +12,7 @@ export default function ShareButtons() {
         }
         return path;
     }, []);
-    const shareText = `Just saw this AI tool which can detect hallucinations in your content, seems cool \n\n${toolUrl}`;
+    const shareText = `VerifAI helps verify AI‑generated content with source‑backed checks and one‑click fixes. Try it: \n\n${toolUrl}`;
 
     const shareOnTwitter = () => {
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
@@ -37,7 +37,7 @@ export default function ShareButtons() {
     return (
         <div className="my-12 pt-12 space-y-6 opacity-0 animate-fade-up">
             <h3 className="text-lg text-center text-black mb-6">
-                Share this hallucinations detector tool now!
+                Share VerifAI with your team
             </h3>
             <div className="flex flex-col sm:flex-row justify-center gap-8">
                 <button

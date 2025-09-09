@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-    basePath: "/hallucination-detector",
+    basePath: "/verifai",
     experimental: {
       serverActions: {
         allowedOrigins: ["demo.exa.ai"],

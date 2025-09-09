@@ -108,7 +108,9 @@ const config: Config = {
   			}
   		},
   		animation: {
-  			'fade-up': 'fade-up 0.5s ease-out forwards'
+  			'fade-up': 'fade-up 0.5s ease-out forwards',
+  			'border-beam': 'border-beam calc(var(--duration)*1s) infinite linear',
+  			'shine-pulse': 'shine-pulse var(--shine-pulse-duration) infinite linear',
   		},
   		keyframes: {
   			'fade-up': {
@@ -120,6 +122,14 @@ const config: Config = {
   					opacity: '1',
   					transform: 'translateY(0)'
   				}
+  			},
+  			'border-beam': {
+  				'100%': { 'offsetDistance': '100%' }
+  			},
+  			'shine-pulse': {
+  				'0%': { 'background-position': '0% 0%' },
+  				'50%': { 'background-position': '100% 100%' },
+  				'to': { 'background-position': '0% 0%' }
   			}
   		},
   		borderRadius: {

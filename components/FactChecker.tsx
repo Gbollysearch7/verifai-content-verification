@@ -23,7 +23,13 @@ type FactCheckResponse = {
   confidence_score: number;
 };
 
-export default function FactChecker() {
+interface FactCheckerProps {
+  hideBranding?: boolean;
+  showFooter?: boolean;
+  biggerInput?: boolean;
+}
+
+export default function FactChecker({ hideBranding = false, showFooter = true, biggerInput = false }: FactCheckerProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [factCheckResults, setFactCheckResults] = useState<any[]>([]);
   const [articleContent, setArticleContent] = useState('');
@@ -31,6 +37,54 @@ export default function FactChecker() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showAllClaims, setShowAllClaims] = useState(true);
   const [extractedCount, setExtractedCount] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    try {
+      setUploading(true);
+      setError(null);
+      const ext = file.name.toLowerCase();
+      if (ext.endsWith('.docx')) {
+        const buf = await file.arrayBuffer();
+        try {
+          const mammoth = await import('mammoth');
+          // @ts-ignore
+          const result = await mammoth.extractRawText({ arrayBuffer: buf });
+          setArticleContent((result as any).value || '');
+        } catch (e) {
+          setError('DOCX parsing requires the mammoth package. Please install: npm i mammoth');
+        }
+      } else if (ext.endsWith('.pdf')) {
+        const pdfjs = await import('pdfjs-dist');
+        // @ts-ignore
+        const pdfjsLib = (pdfjs as any).default || pdfjs;
+        // Try to set workerSrc; host app should serve the worker from node_modules
+        try {
+          // @ts-ignore
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+        } catch {}
+        const arrayBuffer = await file.arrayBuffer();
+        // @ts-ignore
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map((item: any) => item.str);
+          fullText += strings.join(' ') + '\n';
+        }
+        setArticleContent(fullText.trim());
+      } else {
+        setError('Unsupported file. Please upload a PDF or DOCX.');
+      }
+    } catch (err) {
+      setError('Failed to read file.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Create a ref for the loading or bottom section
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -51,9 +105,9 @@ export default function FactChecker() {
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = '150px';
+      textarea.style.height = biggerInput ? '400px' : '150px';
       const scrollHeight = textarea.scrollHeight;
-      textarea.style.height = `${Math.min(scrollHeight, 300)}px`;
+      textarea.style.height = `${Math.min(scrollHeight, biggerInput ? 600 : 300)}px`;
     }
   };
 
@@ -188,6 +242,7 @@ export default function FactChecker() {
     <div className="flex flex-col min-h-screen z-0">
 
         {/* Badge positioned at the top */}
+      {!hideBranding && (
       <div className="w-full flex justify-center pt-10 opacity-0 animate-fade-up [animation-delay:200ms]">
         <Link href="https://exa.ai/" target="_blank">
           <AnimatedGradientText>
@@ -203,26 +258,39 @@ export default function FactChecker() {
           </AnimatedGradientText>
         </Link>
       </div>
+      )}
 
       <main className="flex flex-col items-center justify-center flex-grow w-full max-w-6xl md:max-w-4xl p-6">
         <div className="text-left">
-          <h1 className="md:text-6xl text-4xl pb-5 font-medium opacity-0 animate-fade-up [animation-delay:400ms]">
-            Detect LLM 
-            <span className="text-brand-default"> Hallucinations </span>
+          <h1 className="md:text-5xl text-3xl pb-5 font-bold opacity-0 animate-fade-up [animation-delay:400ms] text-gray-900">
+            VerifAI Content Verification
           </h1>
 
-          <p className="text-gray-800 mb-12 opacity-0 animate-fade-up [animation-delay:600ms]">
-            Verify your content with real web data.
+          <p className="text-gray-600 mb-8 opacity-0 animate-fade-up [animation-delay:600ms] text-lg">
+            Paste your content below and let AI verify every claim with real-time sources.
           </p>
         </div>
     
         <form onSubmit={factCheck} className="space-y-6 w-full mb-10">
+          <div className="flex items-center gap-3 opacity-0 animate-fade-up [animation-delay:700ms]">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+              }}
+              className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+            />
+            {uploading && <span className="text-sm text-gray-600">Reading file…</span>}
+          </div>
           <textarea
             ref={textareaRef}
             value={articleContent}
             onChange={(e) => setArticleContent(e.target.value)}
-            placeholder="Enter Your Content"
-            className="w-full bg-white p-3 border box-border outline-none rounded-none ring-2 ring-brand-default resize-none min-h-[150px] max-h-[250px] overflow-auto opacity-0 animate-fade-up [animation-delay:800ms] transition-[height] duration-200 ease-in-out"
+            placeholder="Paste your content or upload a PDF/DOCX above"
+            className={`w-full bg-white p-4 border box-border outline-none rounded-lg ring-2 ring-blue-500 resize-none ${biggerInput ? 'min-h-[400px] max-h-[600px]' : 'min-h-[150px] max-h-[250px]'} overflow-auto opacity-0 animate-fade-up [animation-delay:800ms] transition-[height] duration-200 ease-in-out text-gray-900 placeholder-gray-500`}
           />
 
           <div className="flex justify-between text-sm text-gray-600 opacity-0 animate-fade-up [animation-delay:900ms]">
@@ -238,8 +306,8 @@ export default function FactChecker() {
             <button
               onClick={loadSampleContent}
               disabled={isGenerating}
-              className={`px-3 py-2 border-2 border-brand-default text-brand-default font-semibold rounded-none hover:bg-brand-default hover:text-white transition-all opacity-0 animate-fade-up [animation-delay:1000ms] ${
-                isGenerating ? 'cursor-not-allowed' : ''
+              className={`px-4 py-2 border-2 border-blue-500 text-blue-600 font-semibold rounded-lg hover:bg-blue-500 hover:text-white transition-all opacity-0 animate-fade-up [animation-delay:1000ms] ${
+                isGenerating ? 'cursor-not-allowed opacity-50' : ''
               }`}
             >
               Try with a sample blog post
@@ -248,12 +316,12 @@ export default function FactChecker() {
 
           <button
             type="submit"
-            className={`w-full text-white mb-10 font-semibold px-2 py-2 rounded-none transition-opacity opacity-0 animate-fade-up [animation-delay:1200ms] min-h-[50px] ${
-              isGenerating || articleContent.length < 50 ? 'bg-gray-400' : 'bg-brand-default ring-2 ring-brand-default'
-            } transition-colors`}
+            className={`w-full text-white mb-10 font-semibold px-4 py-4 rounded-lg transition-all opacity-0 animate-fade-up [animation-delay:1200ms] min-h-[60px] text-lg ${
+              isGenerating || articleContent.length < 50 ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
+            }`}
             disabled={isGenerating || articleContent.length < 50}
           >
-            {isGenerating ? 'Detecting Hallucinations...' : 'Detect Hallucinations'}
+            {isGenerating ? 'Verifying Content…' : 'Verify Content with VerifAI'}
           </button>
         </form>
 
@@ -315,43 +383,21 @@ export default function FactChecker() {
 
       </main>
   
+      {showFooter && (
       <footer className="w-full py-6 px-8 mb-6 mt-auto opacity-0 animate-fade-up [animation-delay:1400ms]">
         <div className="max-w-md mx-auto">
           <p className="text-md text-center text-gray-600">
-            <Link 
-              href="https://dashboard.exa.ai" 
-              target="_blank"
-              className="underline cursor-pointer hover:text-gray-800"
-            >
-              Try Exa API
-            </Link>
+            <Link href="https://dashboard.exa.ai" target="_blank" className="underline cursor-pointer hover:text-gray-800">Try Exa API</Link>
             <span className="mx-3">|</span>
-            <Link 
-              href="https://github.com/exa-labs/exa-hallucination-detector" 
-              target="_blank"
-              className="underline cursor-pointer hover:text-gray-800"
-            >
-              Project Code
-            </Link>
+            <Link href="https://github.com/exa-labs/exa-hallucination-detector" target="_blank" className="underline cursor-pointer hover:text-gray-800">Project Code</Link>
             <span className="mx-3">|</span>
-            <Link 
-              href="https://exa.ai/demos" 
-              target="_blank"
-              className="underline cursor-pointer hover:text-gray-800"
-            >
-              See More Demo Apps
-            </Link>
+            <Link href="https://exa.ai/demos" target="_blank" className="underline cursor-pointer hover:text-gray-800">See More Demo Apps</Link>
             <span className="mx-3">|</span>
-            <Link 
-              href="https://docs.exa.ai/examples/demo-hallucination-detector" 
-              target="_blank"
-              className="underline cursor-pointer hover:text-gray-800"
-            >
-              Tutorial
-            </Link>
+            <Link href="https://docs.exa.ai/examples/demo-hallucination-detector" target="_blank" className="underline cursor-pointer hover:text-gray-800">Tutorial</Link>
           </p>
         </div>
       </footer>
+      )}
     </div>
   );
 }

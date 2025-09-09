@@ -5,7 +5,7 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host');
   if (host === 'exa-hallucination-detector.vercel.app') {
-    return NextResponse.redirect('https://demo.exa.ai/hallucination-detector', {
+    return NextResponse.redirect('https://demo.exa.ai/verifai', {
       status: 301,
     });
   }
