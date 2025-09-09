@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Analytics } from '@vercel/analytics/next';
+import Link from "next/link";
 
 // Load the ABCDiatype font (Regular and Bold only)
 const abcdDiatype = localFont({
@@ -70,6 +71,17 @@ export default function RootLayout({
       <body
         className={`${abcdDiatype.variable} ${reckless.variable} antialiased`}
       >
+        <header className="w-full border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+          <div className="mx-auto max-w-6xl md:max-w-4xl px-6 py-3 flex items-center justify-between">
+            <Link href="/" className="text-sm font-semibold text-gray-900">
+              Hallucinations Detector
+            </Link>
+            <nav className="flex items-center gap-6 text-sm text-gray-700">
+              <Link href="/landing" className="hover:text-gray-900">Landing</Link>
+              <Link href="/" className="hover:text-gray-900">Tool</Link>
+            </nav>
+          </div>
+        </header>
         {children}
         <Analytics />
       </body>

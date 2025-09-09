@@ -30,6 +30,7 @@ export default function FactChecker() {
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showAllClaims, setShowAllClaims] = useState(true);
+  const [extractedCount, setExtractedCount] = useState<number | null>(null);
 
   // Create a ref for the loading or bottom section
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -139,9 +140,11 @@ export default function FactChecker() {
     setIsGenerating(true);
     setError(null);
     setFactCheckResults([]);
+    setExtractedCount(null);
   
     try {
       const claims = await extractClaims(articleContent);
+      setExtractedCount(claims?.length || 0);
       const finalResults = await Promise.all(
         claims.map(async ({ claim, original_text }: Claim) => {
           try {
@@ -222,6 +225,15 @@ export default function FactChecker() {
             className="w-full bg-white p-3 border box-border outline-none rounded-none ring-2 ring-brand-default resize-none min-h-[150px] max-h-[250px] overflow-auto opacity-0 animate-fade-up [animation-delay:800ms] transition-[height] duration-200 ease-in-out"
           />
 
+          <div className="flex justify-between text-sm text-gray-600 opacity-0 animate-fade-up [animation-delay:900ms]">
+            <span>
+              {articleContent.length < 50
+                ? `Minimum 50 characters (${50 - articleContent.length} to go)`
+                : 'Ready to check'}
+            </span>
+            <span>{articleContent.length} chars</span>
+          </div>
+
           <div className="pb-5">
             <button
               onClick={loadSampleContent}
@@ -237,9 +249,9 @@ export default function FactChecker() {
           <button
             type="submit"
             className={`w-full text-white mb-10 font-semibold px-2 py-2 rounded-none transition-opacity opacity-0 animate-fade-up [animation-delay:1200ms] min-h-[50px] ${
-              isGenerating ? 'bg-gray-400' : 'bg-brand-default ring-2 ring-brand-default'
+              isGenerating || articleContent.length < 50 ? 'bg-gray-400' : 'bg-brand-default ring-2 ring-brand-default'
             } transition-colors`}
-            disabled={isGenerating}
+            disabled={isGenerating || articleContent.length < 50}
           >
             {isGenerating ? 'Detecting Hallucinations...' : 'Detect Hallucinations'}
           </button>
@@ -247,7 +259,12 @@ export default function FactChecker() {
 
         {isGenerating && (
             <div ref={loadingRef} className="w-full">
-            <LoadingMessages isGenerating={isGenerating} />
+              {extractedCount !== null && (
+                <div className="mb-4 p-3 bg-white border rounded-none text-sm text-gray-700">
+                  Found {extractedCount} {extractedCount === 1 ? 'claim' : 'claims'}. Verifying with sources...
+                </div>
+              )}
+              <LoadingMessages isGenerating={isGenerating} />
             </div>
         )}
 

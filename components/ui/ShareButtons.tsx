@@ -1,10 +1,17 @@
 "use client";
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Twitter, Linkedin, Users } from 'lucide-react';
+import { getAssetPath } from "@/lib/utils";
 
 export default function ShareButtons() {
     const [copyMessage, setCopyMessage] = useState('');
-    const toolUrl = 'https://demo.exa.ai/hallucination-detector';
+    const toolUrl = useMemo(() => {
+        const path = getAssetPath("");
+        if (typeof window !== 'undefined') {
+            return `${window.location.origin}${path}`;
+        }
+        return path;
+    }, []);
     const shareText = `Just saw this AI tool which can detect hallucinations in your content, seems cool \n\n${toolUrl}`;
 
     const shareOnTwitter = () => {
